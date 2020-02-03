@@ -5,11 +5,11 @@
         <el-table :data="tableData"
           border
           style="width: 100%">
-          <el-table-column prop="exmaData.name"
+          <el-table-column prop="examData.name"
             label="考核名称"
             width="200">
           </el-table-column>
-          <el-table-column prop="exmaData.desc"
+          <el-table-column prop="examData.desc"
             label="考核介绍">
           </el-table-column>
           <el-table-column align="center"

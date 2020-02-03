@@ -1,6 +1,27 @@
 <template>
-  <div>
-    <el-container class="list">
+  <div class="container">
+    <div class="tit">搜索</div>
+    <el-row style="width:100%;">
+      <el-col :span="10">
+        <el-input class="srh-input"
+          placeholder="请输入考核名称"
+          size="medium"
+          v-model="srhForm.name"
+          @input="handleSearch"
+          clearable>
+        </el-input>
+      </el-col>
+      <el-col offset="4" :span="10">
+        <el-input class="srh-input"
+          placeholder="请输入被考核者"
+          size="medium"
+          v-model="srhForm.student"
+          @input="handleSearch"
+          clearable>
+        </el-input>
+      </el-col>
+    </el-row>
+    <el-container class="result-container">
       <el-main>
         <el-table :data="tableData"
           border
@@ -34,16 +55,17 @@
           </el-table-column>
           <el-table-column align="center"
             label="操作"
-            width="110">
+            width="120">
             <template slot-scope="scope">
               <el-button @click="handleLook(scope.row)"
                 v-if="!scope.row.isDone">未完成</el-button>
               <el-button @click="handleLook(scope.row)"
                 v-else-if="scope.row.isCheckOver">已填写</el-button>
-              <el-button v-else
-                @click="handleLook(scope.row)"
+              <el-button @click="handleLook(scope.row)"
                 type="primary"
-                size="small">开始填写</el-button>
+                v-else-if="scope.row.isDone&&!scope.row.isCheckOver&&scope.row.issuer===userData.username">开始填写</el-button>
+              <el-button v-else
+                @click="handleLook(scope.row)">点击查看</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -63,12 +85,24 @@ import { mapState } from 'vuex';
 import AV from 'leancloud-storage';
 import moment from 'moment';
 
-export default {
-  name: 'MyExam',
-  components: {},
-  created() {
-    const UserApi = new AV.Query('_User');
+const ListApi = new AV.Query('Examine');
+const UserApi = new AV.Query('_User');
 
+export default {
+  components: {},
+  data() {
+    return {
+      srhForm: {
+        name: '',
+        student: ''
+      },
+      allData: [],
+      originData: [],
+      curPage: 1,
+      totalNum: 0
+    };
+  },
+  created() {
     UserApi.find()
       .then(
         results => {
@@ -84,14 +118,6 @@ export default {
       )
       .then(() => this.getListData());
   },
-  data() {
-    return {
-      allData: [],
-      users: [],
-      curPage: 1,
-      totalNum: 0
-    };
-  },
   computed: {
     ...mapState({ userData: 'userData', typeList: 'typeList' }),
     tableData() {
@@ -102,6 +128,17 @@ export default {
     }
   },
   methods: {
+    handleSearch() {
+      let srhForm = this.srhForm;
+
+      console.log(srhForm);
+
+      this.allData = this.originData.filter(
+        item =>
+          item.examData.name.includes(srhForm.name) &&
+          item.student.includes(srhForm.student)
+      );
+    },
     handleLook(e) {
       this.$router.push({
         path: '/exam-check',
@@ -112,12 +149,10 @@ export default {
       });
     },
     getListData() {
-      const ListApi = new AV.Query('Examine');
-
-      ListApi.equalTo('issuer', this.userData.username);
+      //   ListApi.equalTo('issuer', this.userData.username);
       ListApi.find().then(
         data => {
-          this.allData = data.map(({ _serverData, id, updatedAt }) => {
+          this.originData = data.map(({ _serverData, id, updatedAt }) => {
             let isDone = true;
             let isCheckOver = _serverData.isCheckOver || false;
 
@@ -140,7 +175,8 @@ export default {
               )
             });
           });
-          this.totalNum = this.allData.length;
+          this.totalNum = this.originData.length;
+          this.allData = this.originData;
         },
         error => {
           // 异常处理
@@ -154,3 +190,34 @@ export default {
   }
 };
 </script>
+
+<style lang="scss" scoped>
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-items: center;
+  align-items: center;
+  padding: 0 60px;
+  .tit {
+    font-size: 20px;
+    padding: 30px;
+  }
+  .srh-input {
+    // padding: 0 60px;
+  }
+  .result-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    & > .el-main {
+      padding: 0;
+    }
+    & > .el-footer {
+      padding-top: 20px;
+      width: 100%;
+      text-align: center;
+    }
+  }
+}
+</style>

@@ -150,7 +150,7 @@ export default {
       ExamineApi.set('examUserEmail', this.examUserEmail);
       ExamineApi.set('examTime', this.examTime);
       ExamineApi.set('dateRange', this.dateRange);
-      ExamineApi.set('exmaData', this.form);
+      ExamineApi.set('examData', this.form);
 
       ExamineApi.save().then(
         todo => {

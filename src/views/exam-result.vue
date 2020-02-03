@@ -1,53 +1,145 @@
 <template>
-  <div class="info">
-    <el-row>
-      <el-col :span="4">
-        考核名称:
-      </el-col>
-      <el-col :span="20">
-        {{examData.name}}
-      </el-col>
-    </el-row>
-    <el-row>
-      <el-col :span="4">
-        考核介绍:
-      </el-col>
-      <el-col :span="20">
-        {{examData.desc}}
-      </el-col>
-    </el-row>
-    <el-row>
-      <el-col :span="4">
-        技术类型:
-      </el-col>
-      <el-col :span="20">
-        {{examType}}
-      </el-col>
-    </el-row>
-    <el-row>
-      <el-col :span="4">
-        考核内容:
-      </el-col>
-      <el-col :span="20">
-        <el-button size="mini"
-          type="primary"
-          @click="mdShow=true">点击查看</el-button>
-      </el-col>
-    </el-row>
-    <div v-show="mdShow"
-      class="markdown">
-      <div class="user-title">
-        <span>考核内容</span>
-        <i @click="mdShow=false"
-          style="font-syuize:20px"
-          class="el-icon-close"></i>
+  <div>
+    <div class="info">
+      <el-row>
+        <el-col :span="4">
+          考核名称:
+        </el-col>
+        <el-col :span="20">
+          {{examData.name}}
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="4">
+          考核介绍:
+        </el-col>
+        <el-col :span="20">
+          {{examData.desc}}
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="4">
+          技术类型:
+        </el-col>
+        <el-col :span="20">
+          {{examType}}
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="4">
+          考核内容:
+        </el-col>
+        <el-col :span="20">
+          <el-button size="mini"
+            type="primary"
+            @click="mdShow=true">点击查看</el-button>
+        </el-col>
+      </el-row>
+      <!-- 添加错误 -->
+      <div v
+        v-if="!isCheckOver"
+        class="add-error-container">
+        <el-row>
+          <el-col :span="24"
+            class="title">
+            添加错误
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="3">
+            错误描述:
+          </el-col>
+          <el-col :span="21">
+            <el-input v-model="errAddForm.errorDescr"
+              type="textarea"
+              :rows="3"
+              size="small"
+              placeholder="请输入错误描述(必填）"></el-input>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="3">
+            错误图示:
+          </el-col>
+          <el-col :span="16">
+            <el-input v-model="errAddForm.errorUrl"
+              size="small"
+              placeholder="请输入图片地址"></el-input>
+          </el-col>
+          <el-col :span="1"
+            :offset="2">
+            扣分:
+          </el-col>
+          <el-col :span="2">
+            <el-input v-model="errAddForm.errorScore"
+              size="small"
+              placeholder="请输入分数"></el-input>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8"
+            :offset="16"
+            style="text-align:right;">
+            <el-button type="primary"
+              style="width:80px;"
+              @click="onAddError">添加</el-button>
+          </el-col>
+        </el-row>
       </div>
-      <Markdown isPreview
-        class="md-content"
-        v-model="examData.mdValue" />
+
+      <div v-show="mdShow"
+        class="markdown">
+        <div class="user-title">
+          <span>考核内容</span>
+          <i @click="mdShow=false"
+            style="font-syuize:20px"
+            class="el-icon-close"></i>
+        </div>
+        <Markdown isPreview
+          class="md-content"
+          v-model="examData.mdValue" />
+      </div>
     </div>
     <div class="detail">
-        
+      <el-table :data="tableData"
+        border
+        style="width: 100%">
+        <el-table-column type="index"
+          width="50">
+        </el-table-column>
+        <el-table-column prop="errorDescr"
+          label="错误描述"
+          width="200">
+        </el-table-column>
+        <el-table-column prop="errorUrl"
+          label="错误图示">
+        </el-table-column>
+        <el-table-column prop="errorScore"
+          width="50"
+          label="扣分">
+        </el-table-column>
+        <el-table-column align="center"
+          prop="errorAuthor"
+          width="80"
+          label="填写者">
+        </el-table-column>
+        <el-table-column v-if="!isCheckOver"
+          align="center"
+          label="操作"
+          width="110">
+          <template slot-scope="scope">
+            <el-button @click="handleDel(scope.row)"
+              type="primary"
+              size="small">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    <div v-if="!isCheckOver"
+      style="padding-right:25px;text-align:right;margin-bottom:20px">
+      <el-button type="success"
+        style="width:120px;"
+        @click="handleFinish">完成填写</el-button>
     </div>
   </div>
 </template>
@@ -60,15 +152,25 @@ export default {
   created() {
     //   获取考试信息
     const ListApi = new AV.Query('List');
+    const errorListApi = new AV.Query('Examine');
 
     ListApi.equalTo('objectId', this.examId);
     ListApi.find().then(data => {
       this.examData = data[0]._serverData;
     });
+
+    errorListApi.equalTo('objectId', this.resultId);
+    errorListApi.find().then(data => {
+      this.tableData = data[0]._serverData.errList || [];
+      this.isCheckOver = data[0]._serverData.isCheckOver || false;
+    });
   },
   data() {
     return {
       examData: {},
+      errAddForm: {},
+      isCheckOver: true,
+      tableData: [],
       mdShow: false,
       resultId: this.$route.query.resultId,
       examId: this.$route.query.examId
@@ -83,7 +185,68 @@ export default {
         : '暂无类型';
     }
   },
-  methods: {}
+  methods: {
+    onAddError() {
+      if (!this.errAddForm.errorDescr || this.errAddForm.errorDescr === '') {
+        return this.$message({
+          message: '请输入错误描述！',
+          type: 'warning'
+        });
+      }
+
+      if (!this.errAddForm.errorScore || this.errAddForm.errorScore === '') {
+        return this.$message({
+          message: '请输入扣分！',
+          type: 'warning'
+        });
+      }
+
+      let ExamineApi = AV.Object.createWithoutData(
+        'Examine',
+        this.resultId,
+        'errList'
+      );
+      let data = this.errAddForm;
+
+      data.errorAuthor = this.userData.username;
+      ExamineApi.add('errList', data);
+      ExamineApi.save().then(() => {
+        this.$message({
+          message: '添加错误描述成功！',
+          type: 'success'
+        });
+        this.tableData.push(data);
+        this.errAddForm = {};
+      });
+    },
+    handleDel(data) {
+      this.tableData = this.tableData.filter(item => item !== data);
+
+      let ExamineApi = AV.Object.createWithoutData(
+        'Examine',
+        this.resultId,
+        'errList'
+      );
+
+      ExamineApi.set('errList', this.tableData);
+      ExamineApi.save().then(() => {
+        this.$message({
+          message: '删除完成！',
+          type: 'success'
+        });
+      });
+    },
+    handleFinish() {
+      let ExamineApi = AV.Object.createWithoutData('Examine', this.resultId);
+
+      ExamineApi.set('isCheckOver', true);
+      ExamineApi.save().then(() => {
+        this.$alert('提交成功！', '成功', {
+          confirmButtonText: '确定'
+        });
+      });
+    }
+  }
 };
 </script>
 
@@ -92,10 +255,29 @@ export default {
   color: #606266;
   padding: 20px 25px;
   border-bottom: 1px solid #ececec;
+  font-size: 16px;
   & > .el-row {
     margin-bottom: 10px;
     &:last-child {
       margin-bottom: 0;
+    }
+  }
+  & > .add-error-container {
+    font-size: 14px;
+    border-radius: 5px;
+    & > .el-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      & > .title {
+        font-size: 18px;
+        margin-bottom: 10px;
+        color: #409eff;
+        font-weight: 450;
+      }
+      &:last-child {
+        margin-bottom: 0;
+      }
     }
   }
 }

@@ -36,7 +36,9 @@
         </el-col>
       </el-row>
       <!-- 添加错误 -->
-      <div class="add-error-container">
+      <div v
+        v-if="!isCheckOver"
+        class="add-error-container">
         <el-row>
           <el-col :span="24"
             class="title">
@@ -121,21 +123,23 @@
           width="80"
           label="填写者">
         </el-table-column>
-        <el-table-column align="center"
+        <el-table-column v-if="!isCheckOver"
+          align="center"
           label="操作"
           width="110">
           <template slot-scope="scope">
-            <el-button @click="handleLook(scope.row)"
+            <el-button @click="handleDel(scope.row)"
               type="primary"
               size="small">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
-    <div style="padding-right:20px;text-align:right;">
+    <div v-if="!isCheckOver"
+      style="padding-right:25px;text-align:right;margin-bottom:20px">
       <el-button type="success"
         style="width:120px;"
-        @click="onAddError">完成填写</el-button>
+        @click="handleFinish">完成填写</el-button>
     </div>
   </div>
 </template>
@@ -147,23 +151,22 @@ export default {
   components: { Markdown },
   created() {
     //   获取考试信息
-    const ListApi = new AV.Query('List');
     const errorListApi = new AV.Query('Examine');
-
-    ListApi.equalTo('objectId', this.examId);
-    ListApi.find().then(data => {
-      this.examData = data[0]._serverData;
-    });
 
     errorListApi.equalTo('objectId', this.resultId);
     errorListApi.find().then(data => {
-      this.tableData = data[0]._serverData.errList;
+      console.log(data[0]._serverData.examData);
+      
+      this.examData = data[0]._serverData.examData;
+      this.tableData = data[0]._serverData.errList || [];
+      this.isCheckOver = data[0]._serverData.isCheckOver || false;
     });
   },
   data() {
     return {
       examData: {},
       errAddForm: {},
+      isCheckOver: true,
       tableData: [],
       mdShow: false,
       resultId: this.$route.query.resultId,
@@ -204,9 +207,41 @@ export default {
 
       data.errorAuthor = this.userData.username;
       ExamineApi.add('errList', data);
-      ExamineApi.save();
+      ExamineApi.save().then(() => {
+        this.$message({
+          message: '添加错误描述成功！',
+          type: 'success'
+        });
+        this.tableData.push(data);
+        this.errAddForm = {};
+      });
+    },
+    handleDel(data) {
+      this.tableData = this.tableData.filter(item => item !== data);
 
-      this.tableData.push(this.errAddForm);
+      let ExamineApi = AV.Object.createWithoutData(
+        'Examine',
+        this.resultId,
+        'errList'
+      );
+
+      ExamineApi.set('errList', this.tableData);
+      ExamineApi.save().then(() => {
+        this.$message({
+          message: '删除完成！',
+          type: 'success'
+        });
+      });
+    },
+    handleFinish() {
+      let ExamineApi = AV.Object.createWithoutData('Examine', this.resultId);
+
+      ExamineApi.set('isCheckOver', true);
+      ExamineApi.save().then(() => {
+        this.$alert('提交成功！', '成功', {
+          confirmButtonText: '确定'
+        });
+      });
     }
   }
 };

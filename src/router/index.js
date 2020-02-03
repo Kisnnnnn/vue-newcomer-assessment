@@ -5,8 +5,11 @@ import Add from '../views/add.vue';
 import List from '../views/list.vue';
 import Edit from '../views/edit.vue';
 import Detail from '../views/detail.vue';
+import Start from '../views/start.vue';
+import StartDetail from '../views/start-detail.vue';
 import MyExam from '../views/my-exam.vue';
 import MyCheck from '../views/my-check.vue';
+import Result from '../views/result.vue';
 import ExamResult from '../views/exam-result.vue';
 import ExamCheck from '../views/exam-check.vue';
 import Login from '../views/login.vue';
@@ -38,11 +41,20 @@ const routes = [{
     path: '/my-exam',
     component: MyExam
   }, {
+    path: '/start',
+    component: Start
+  }, {
+    path: '/start-detail',
+    component: StartDetail
+  }, {
     path: '/my-check',
     component: MyCheck
   }, {
     path: '/exam-result',
     component: ExamResult
+  }, {
+    path: '/result',
+    component: Result
   }, {
     path: '/exam-check',
     component: ExamCheck
